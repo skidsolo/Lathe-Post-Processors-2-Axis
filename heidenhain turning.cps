@@ -8,7 +8,7 @@
   $Date: 2014-05-26 11:17:00 +0200 (ma, 26 maj 2014) $
 */
 
-description = "Generic Heidenhain/MANUALplus Turning";
+description = "Github- Generic Heidenhain/MANUALplus Turning";
 vendor = "Autodesk, Inc.";
 vendorUrl = "http://www.autodesk.com";
 legal = "Copyright (C) 2012-2013 by Autodesk, Inc.";

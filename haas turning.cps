@@ -8,7 +8,7 @@
   $Date: 2014-06-10 11:21:43 +0200 (ti, 10 jun 2014) $
 */
 
-description = "Generic HAAS Turning";
+description = "Github- Generic HAAS Turning";
 vendor = "Autodesk, Inc.";
 vendorUrl = "http://www.autodesk.com";
 legal = "Copyright (C) 2012-2013 by Autodesk, Inc.";

@@ -10,7 +10,7 @@
   FORKID {88B77760-269E-4d46-8588-30814E7FE9A1}
 */
 
-description = "Generic FANUC Turning";
+description = "Github- Generic FANUC Turning";
 vendor = "Autodesk, Inc.";
 vendorUrl = "http://www.autodesk.com";
 legal = "Copyright (C) 2012-2013 by Autodesk, Inc.";
