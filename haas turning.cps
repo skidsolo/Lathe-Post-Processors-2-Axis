@@ -1,14 +1,14 @@
 /**
-  Copyright (C) 2012-2013 by Autodesk, Inc.
+  Copyright (C) 2012-2014 by Autodesk, Inc.
   All rights reserved.
 
   HAAS Lathe post processor configuration.
 
-  $Revision: 37333 $
-  $Date: 2014-06-10 11:21:43 +0200 (ti, 10 jun 2014) $
+  $Revision: 38053 $
+  $Date: 2014-10-25 17:11:06 +0200 (lø, 25 okt 2014) $
 */
 
-description = "Github- Generic HAAS Turning";
+description = "Generic HAAS Turning";
 vendor = "Autodesk, Inc.";
 vendorUrl = "http://www.autodesk.com";
 legal = "Copyright (C) 2012-2013 by Autodesk, Inc.";
@@ -98,7 +98,7 @@ var gotSecondarySpindle = true;
 var gotDoorControl = true;
 var gotTailStock = true;
 var gotBarFeeder = true;
-var gotPartCatcher = true;
+var gotPartCatcher = false;
 
 var WARNING_WORK_OFFSET = 0;
 
@@ -248,16 +248,12 @@ function onOpen() {
     }
   }
   if (usesPrimarySpindle) {
-    writeBlock(
-      gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed)
-    );
+    writeBlock(gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed));
     sOutput.reset();
   }
   if (gotSecondarySpindle) {
     if (usesSecondarySpindle) {
-      writeBlock(
-        gFormat.format(50), pOutput.format(properties.maximumSpindleSpeed)
-      );
+      writeBlock(gFormat.format(50), pOutput.format(properties.maximumSpindleSpeed));
       pOutput.reset();
     }
   }
@@ -276,10 +272,15 @@ function forceXYZ() {
   zOutput.reset();
 }
 
+function forceFeed() {
+  currentFeedId = undefined;
+  feedOutput.reset();
+}
+
 /** Force output of X, Y, Z, and F on next output. */
 function forceAny() {
   forceXYZ();
-  feedOutput.reset();
+  forceFeed();
 }
 
 function FeedContext(id, description, feed) {
@@ -296,8 +297,8 @@ function getFeed(f) {
         if (feedContext.id == currentFeedId) {
           return ""; // nothing has changed
         }
+        forceFeed();
         currentFeedId = feedContext.id;
-        feedOutput.reset();
         return "F#" + (firstFeedParameter + feedContext.id);
       }
     }
@@ -381,7 +382,6 @@ function initializeActiveFeeds() {
     ++id;
   }
   
-/*
   if (hasParameter("operation:reducedFeedrate")) {
     if (movements & (1 << MOVEMENT_REDUCED)) {
       var feedContext = new FeedContext(id, localize("Reduced"), getParameter("operation:reducedFeedrate"));
@@ -390,7 +390,6 @@ function initializeActiveFeeds() {
     }
     ++id;
   }
-*/
 
   if (hasParameter("operation:tool_feedRamp")) {
     if (movements & ((1 << MOVEMENT_RAMP) | (1 << MOVEMENT_RAMP_HELIX) | (1 << MOVEMENT_RAMP_PROFILE) | (1 << MOVEMENT_RAMP_ZIG_ZAG))) {
@@ -602,6 +601,9 @@ function onSection() {
         gSpindleModeModal.reset();
         if (currentSection.getTool().getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED) {
           writeBlock(gSpindleModeModal.format(96), sOutput.format(tool.surfaceSpeed * ((unit == MM) ? 1 : 1/12.0)), mFormat.format(tool.clockwise ? 3 : 4));
+          var maximumSpindleSpeed = (tool.maximumSpindleSpeed > 0) ? Math.min(tool.maximumSpindleSpeed, properties.maximumSpindleSpeed) : properties.maximumSpindleSpeed;
+          writeBlock(gFormat.format(50), sOutput.format(maximumSpindleSpeed));
+          sOutput.reset();
         } else {
           writeBlock(gSpindleModeModal.format(97), sOutput.format(tool.spindleRPM), mFormat.format(tool.clockwise ? 3 : 4));
         }
@@ -634,6 +636,9 @@ function onSection() {
         gSpindleModeModal.reset();
         if (currentSection.getTool().getSpindleMode() == SPINDLE_CONSTANT_SURFACE_SPEED) {
           writeBlock(gSpindleModeModal.format(96), pOutput.format(tool.surfaceSpeed * ((unit == MM) ? 1 : 1/12.0)), mFormat.format(tool.clockwise ? 143 : 144));
+          var maximumSpindleSpeed = (tool.maximumSpindleSpeed > 0) ? Math.min(tool.maximumSpindleSpeed, properties.maximumSpindleSpeed) : properties.maximumSpindleSpeed;
+          writeBlock(gFormat.format(50), pOutput.format(maximumSpindleSpeed));
+          pOutput.reset();
         } else {
           writeBlock(gSpindleModeModal.format(97), pOutput.format(tool.spindleRPM), mFormat.format(tool.clockwise ? 143 : 144));
         }
@@ -693,6 +698,14 @@ function onSection() {
     );
 
     gMotionModal.reset();
+  }
+
+  if (gotPartCatcher &&
+      (currentSection.partCatcher ||
+       (typeof currentSection.partCatcher == "undefined") &&
+       hasParameter("operation-strategy") &&
+       (getParameter("operation-strategy") == "turningPart"))) {
+	// activate part catcher here
   }
 
   if (properties.useParametricFeed &&
@@ -780,7 +793,7 @@ function onRapid(_x, _y, _z) {
       writeBlock(gMotionModal.format(1), x, y, z, getFeed(getHighfeedrate(_x)));
     } else {
       writeBlock(gMotionModal.format(0), x, y, z);
-      feedOutput.reset();
+      forceFeed();
     }
     resetFeed = false;
   }
@@ -796,7 +809,7 @@ function onLinear(_x, _y, _z, feed) {
   }
   if (resetFeed) {
     resetFeed = false;
-    feedOutput.reset();
+    forceFeed();
   }
   
   var x = xOutput.format(_x);
@@ -822,7 +835,7 @@ function onLinear(_x, _y, _z, feed) {
     }
   } else if (f) {
     if (getNextRecord().isMotion()) { // try not to output feed without motion
-      feedOutput.reset(); // force feed on next line
+      forceFeed(); // force feed on next line
     } else {
       writeBlock(gMotionModal.format(isSpeedFeedSynchronizationActive() ? 32 : 1), f);
     }
@@ -925,7 +938,7 @@ function onCyclePoint(x, y, z) {
     var threadsPerInch = 1.0/cycle.pitch; // per mm for metric
     var f = 1/threadsPerInch;
     writeBlock(gMotionModal.format(92), xOutput.format(x - cycle.incrementalX), yOutput.format(y), zOutput.format(z), conditional(zFormat.isSignificant(i), g92IOutput.format(i)), pitchOutput.format(f));
-    feedOutput.reset();
+    forceFeed();
     return;
   }
 
@@ -1011,7 +1024,7 @@ function onCyclePoint(x, y, z) {
         "P" + milliFormat.format(P),
         pitchOutput.format(F)
       );
-      feedOutput.reset();
+      forceFeed();
       break;
     case "left-tapping":
       if (!F) {
@@ -1023,7 +1036,7 @@ function onCyclePoint(x, y, z) {
         "P" + milliFormat.format(P),
         pitchOutput.format(F)
       );
-      feedOutput.reset();
+      forceFeed();
       break;
     case "right-tapping":
       if (!F) {
@@ -1035,7 +1048,7 @@ function onCyclePoint(x, y, z) {
         "P" + milliFormat.format(P),
         pitchOutput.format(F)
       );
-      feedOutput.reset();
+      forceFeed();
       break;
     case "tapping-with-chip-breaking":
     case "left-tapping-with-chip-breaking":
@@ -1050,7 +1063,7 @@ function onCyclePoint(x, y, z) {
         "Q" + spatialFormat.format(cycle.incrementalDepth),
         pitchOutput.format(F)
       );
-      feedOutput.reset();
+      forceFeed();
       break;
     case "fine-boring":
       writeBlock(
@@ -1139,7 +1152,7 @@ function onCycleEnd() {
   if (!cycleExpanded) {
     switch (cycleType) {
     case "thread-turning":
-      feedOutput.reset();
+      forceFeed();
       xOutput.reset();
       zOutput.reset();
       g92IOutput.reset();
@@ -1296,6 +1309,14 @@ function onCommand(command) {
 
 function onSectionEnd() {
   forceAny();
+
+  if (gotPartCatcher &&
+      (currentSection.partCatcher ||
+       (typeof currentSection.partCatcher == "undefined") &&
+       hasParameter("operation-strategy") &&
+       (getParameter("operation-strategy") == "turningPart"))) {
+	// deactivate part catcher here
+  }
 }
 
 function onClose() {
