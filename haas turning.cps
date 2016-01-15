@@ -248,6 +248,15 @@ function onOpen() {
       break;
     }
   }
+  
+     // Calculate workpiece dimensions  
+    var workpiece = getWorkpiece();
+    var delta = Vector.diff(workpiece.upper, workpiece.lower);
+    
+    if (delta.isNonZero()) {
+      writeComment("Stock Dia X=" + zOutput.format(delta.x));
+      writeComment("Stock length Z=" + zOutput.format(delta.z));
+  }
   if (usesPrimarySpindle) {
     writeBlock(gFormat.format(50), sOutput.format(properties.maximumSpindleSpeed));
     sOutput.reset();
