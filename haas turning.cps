@@ -3,6 +3,7 @@
   All rights reserved.
 
   HAAS Lathe post processor configuration.
+  POSTTICKET#442
 
   $Revision: 38053 $
   $Date: 2014-10-25 17:11:06 +0200 (lø, 25 okt 2014) $
