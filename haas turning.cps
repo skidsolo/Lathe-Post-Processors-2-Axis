@@ -1328,11 +1328,8 @@ function onClose() {
   onCommand(COMMAND_COOLANT_OFF);
 
   // we might want to retract in Z before X
-  writeBlock(gFormat.format(53), gMotionModal.format(0), "X" + xFormat.format(0)); // retract
-  xOutput.reset();
-  writeBlock(gFormat.format(53), gMotionModal.format(0), "Z" + zFormat.format(0)); // retract
-  zOutput.reset();
-
+  writeBlock(gFormat.format(91), xOutput.format(toPreciseUnit(1, IN)), zOutput.format(toPreciseUnit(1, IN)));
+  writeBlock(gFormat.format(90));
 
   onImpliedCommand(COMMAND_END);
   onImpliedCommand(COMMAND_STOP_SPINDLE);
